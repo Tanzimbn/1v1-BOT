@@ -31,7 +31,8 @@ async def on_ready():
 async def hello(itr: discord.Interaction):
     embed = discord.Embed()
     embed.title = "Hi, myself 1v1."
-    embed.description = "I am a Duel bot. blah blah blah"
+    embed.description = "Challenge your friends to a battle of wits! 🎮 Engage in a thrilling 1v1 match where both participants will receive the exact same  challenging problem. The race is on, the first one to solve the problem emerges victorious!\n\nCommands:\n**/hello**: *Get to know more about the bot.*\n**/handle_set**: *Set or update your handle for duels.*\n**/duel**: *Challenge someone for a thrilling 1v1 match. Both will receive the same problem, and the first to solve it wins!*\n**/accept**: *Accept an incoming duel challenge and prepare for the ultimate showdown of wits.*\n**/drop**: *Drop an ongoing duel if you need to step away or change your mind.*\n**/complete**: *Complete a duel that you've successfully solved. Claim your victory and earn bragging rights!*\n\n**Happy coding :)**"
+    embed.color = discord.Color.blue()
     await itr.response.send_message(embed=embed, ephemeral=True)
 
 # @client.event
