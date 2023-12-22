@@ -16,6 +16,10 @@ def handle_exists(handle: str):
         return False
     return True
 
+def user_info(handle: str):
+    params = {"handles": [handle]}
+    return cf_query("user.info", params=params)[0]
+
 def all_ac_problem(handle: str):
     params = {"handle": handle}
     submissions = cf_query("user.status", params=params)
@@ -38,8 +42,9 @@ def all_ac_problem_detail(handle: str):
             problems[prob] = creationTime
     return problems
 
-def all_problem(rating: int):
-    problems = cf_query("problemset.problems")["problems"]
+def all_problem(rating: int, tag: str):
+    params = {"tags": tag}
+    problems = cf_query("problemset.problems", params)["problems"]
     select_prob = set()
     for _prob in problems:
         _rating = _prob.get("rating")
@@ -47,4 +52,18 @@ def all_problem(rating: int):
             select_prob.add((_prob.get("contestId"), _prob.get("index"), _prob.get("name")))
     return select_prob
 
+def compiler_error_check(handle: str, contestId: int, index: str, submit_time: int):
+    params = {"handle": handle, "from":'1', "count": '60'}
+    submissions = cf_query("user.status", params)
+    for submission in submissions:
+        if submission.get("verdict") == "COMPILATION_ERROR" and submission.get("contestId") == contestId and submission.get("problem").get("index") == index:
+            creationTime = submission.get("creationTimeSeconds")
+            if creationTime <= submit_time:
+                return True
+            
+    return False
+
+# print(compiler_error_check("tanzim_bn", 4, "A", 1703223102))
+# print(user_info("tanzim_bn")['handle'])
+# print(all_problem(3500, "implementation"))
 # print(all_ac_problem_detail("tanzim_bn"))

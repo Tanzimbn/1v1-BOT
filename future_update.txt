@@ -1,0 +1,2 @@
+Add emoji with win message
+embed message color
