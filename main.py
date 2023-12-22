@@ -92,7 +92,7 @@ async def handle_set(itr: discord.Interaction, handle: str):
         embed.remove_field(index=0)
         if cf_api.compiler_error_check(handle, 4, 'A', submit_time):    
             info = cf_api.user_info(handle)
-            # handle_data.set_or_update_handle(handle, itr.user.id)
+            handle_data.set_or_update_handle(handle, itr.user.id)
             embed.title = "Congo!"
             embed.description = f"Handle for {itr.user.mention} set to {handle}"
             embed.color = discord.Color.green()
