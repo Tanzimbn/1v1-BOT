@@ -1,4 +1,4 @@
 .env
 __pycache__/
-duels.csv
-handles.csv
+duels.csv/
+handles.csv/
