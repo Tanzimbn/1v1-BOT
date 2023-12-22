@@ -1,7 +1,9 @@
 import discord
 import os
+import asyncio
 from keep_alive import keep_alive
 import time
+import typing
 from discord.ext import commands
 from data import handle_data, duel_data
 from api import cf_api
@@ -13,6 +15,7 @@ bot = commands.Bot(command_prefix="!", intents=discord.Intents.all(), help_comma
 DESCRIPTIONS = {
     "hello": "describe about bot",
     "handle_set": "Set or update handle",
+    "handle_list": "Handle list of all user",
     "duel": "Challenge someone for a duel",
     "accept": "Accept a duel",
     "drop": "Drop a duel",
@@ -31,8 +34,25 @@ async def on_ready():
 async def hello(itr: discord.Interaction):
     embed = discord.Embed()
     embed.title = "Hi, myself 1v1."
-    embed.description = "Challenge your friends to a battle of wits! 🎮 Engage in a thrilling 1v1 match where both participants will receive the exact same  challenging problem. The race is on, the first one to solve the problem emerges victorious!\n\nCommands:\n**/hello**: *Get to know more about the bot.*\n**/handle_set**: *Set or update your handle for duels.*\n**/duel**: *Challenge someone for a thrilling 1v1 match. Both will receive the same problem, and the first to solve it wins!*\n**/accept**: *Accept an incoming duel challenge and prepare for the ultimate showdown of wits.*\n**/drop**: *Drop an ongoing duel if you need to step away or change your mind.*\n**/complete**: *Complete a duel that you've successfully solved. Claim your victory and earn bragging rights!*\n\n**Happy coding :)**"
+    embed.description = "Challenge your friends to a battle of wits! 🎮 Engage in a thrilling 1v1 match where both participants will receive the exact same  challenging problem. The race is on, the first one to solve the problem emerges victorious!\n\nCommands:\n**/hello**: *Get to know more about the bot.*\n**/handle_set**: *Set or update your handle for duels.*\n**/handle_list**: *List of Handle of all user.*\n**/duel**: *Challenge someone for a thrilling 1v1 match. Both will receive the same problem, and the first to solve it wins!*\n**/accept**: *Accept an incoming duel challenge and prepare for the ultimate showdown of wits.*\n**/drop**: *Drop an ongoing duel if you need to step away or change your mind.*\n**/complete**: *Complete a duel that you've successfully solved. Claim your victory and earn bragging rights!*\n\n**Happy coding :)**"
     embed.color = discord.Color.blue()
+    await itr.response.send_message(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(description=DESCRIPTIONS["handle_list"])
+async def handle_list(itr: discord.Interaction):
+    lst = handle_data.all_user_info()
+    embed = discord.Embed()
+    embed.title = "List of Users Handle:"
+    embed.color = discord.Color.from_rgb(38, 243, 243)
+    user_name = []
+    user_handle = []
+    for user in lst:
+        user_name.append(bot.get_user(user[0]).name)
+        user_handle.append(user[1])
+    embed.add_field(name="User_name", value = ('\n'.join(user_name)))
+    embed.add_field(name="Handle", value = ('\n'.join(user_handle)))
+    
     await itr.response.send_message(embed=embed, ephemeral=True)
 
 # @client.event
@@ -52,26 +72,63 @@ async def handle_set(itr: discord.Interaction, handle: str):
     :param handle: Codeforces handle of the member
     """
     embed = discord.Embed()
-
+    ephemeral = False
+    # check if handle already taken
+    id = handle_data.handle_owner(handle)
     # show error if handle does not exist
-    if cf_api.handle_exists(handle):
-        handle_data.set_or_update_handle(handle, itr.user.id)
-        embed.description = f"Handle of {itr.user.mention} set to {handle}"
-        embed.color = discord.Color.green()
+    if len(id) and id[0] != itr.user.id:
+        embed.description = f"{handle} already used by <@{id[0]}>!"
+        embed.title = "Error!"
+        embed.color = discord.Color.red()
+        embed.set_footer(text="Please check again!")
+    elif cf_api.handle_exists(handle):
+        embed.description = f"{itr.user.mention} submit a compile error to problem below within 60 seconds"
+        problem_url = "https://codeforces.com/problemset/problem/4/A"
+        embed.add_field(name="Problem URL", value=problem_url, inline=False)
+        embed.color = discord.Color.yellow()
+        await itr.response.send_message(embed=embed)
+        submit_time = int(time.time())
+        await asyncio.sleep(60)
+        embed.remove_field(index=0)
+        if cf_api.compiler_error_check(handle, 4, 'A', submit_time):    
+            info = cf_api.user_info(handle)
+            # handle_data.set_or_update_handle(handle, itr.user.id)
+            embed.title = "Congo!"
+            embed.description = f"Handle for {itr.user.mention} set to {handle}"
+            embed.color = discord.Color.green()
+            embed.set_thumbnail(url=info["avatar"])
+            embed.add_field(name="Rating",value=info["rating"])
+            embed.add_field(name="MaxRank",value=info["maxRank"])
+        else:
+            embed.description = "You are out of time."
+            embed.title = "Error!"
+            embed.color = discord.Color.red()
+            embed.set_footer(text="Please give command again!")
     else:
         embed.description = f"{handle} doesn't exist"
         embed.title = "Error!"
         embed.color = discord.Color.red()
         embed.set_footer(text="Please check again!")
 
-    await itr.response.send_message(embed=embed)
+    await itr.followup.send(
+        embed=embed,
+        ephemeral=ephemeral,
+    )
+
+async def tag_autocompletion(
+        interaction: discord.Interaction,
+        current: str
+    ) -> typing.List[discord.app_commands.Choice[str]]:
+        data = []
+        for drink_choice in ['greedy', 'dp', 'math', 'combinatorics', 'tree']:
+            if current.lower() in drink_choice.lower():
+                data.append(discord.app_commands.Choice(name=drink_choice, value=drink_choice))
+        return data 
 
 @bot.tree.command(description=DESCRIPTIONS["duel"])
-async def duel(itr: discord.Interaction, opponent: discord.Member, rating: int):
-    """
-    :param opponent: Member of the server you want to challenge
-    :param rating: Rating of the problem
-    """
+@discord.app_commands.autocomplete(tag=tag_autocompletion)
+async def duel(itr: discord.Interaction, opponent: discord.Member, rating: int, tag: str):
+    print(tag)
     uid1 = itr.user.id
     uid2 = opponent.id
     embed = discord.Embed(description="Proposing a duel ...")
@@ -90,7 +147,6 @@ async def duel(itr: discord.Interaction, opponent: discord.Member, rating: int):
         )
         ephemeral = True
     elif not handle_data.uid_exists(uid2):
-        print("exist kore")
         embed.description = (
             f"Could not find {opponent.mention}'s handle in the database\n"
             ":point_right:  Type `/handle_set` to set your handle"
@@ -112,12 +168,13 @@ async def duel(itr: discord.Interaction, opponent: discord.Member, rating: int):
             # ":point_right:  Type `/duel_list` to list all duels"
         )
     else:
-        duel_data.new(uid1, uid2, rating)
+        duel_data.new(uid1, uid2, rating, tag)
         message_content = opponent.mention
         embed.description = "The one who solves first is the winner!"
         embed.title = f"{opponent.display_name}, are you up for a duel?\n"
         embed.add_field(name="Opponent", value=itr.user.mention)
         embed.add_field(name="rating", value=rating)
+        embed.add_field(name="tag", value=tag)
         embed.color = None
         embed.set_footer(text="Type /accept to accept the duel")
     await itr.followup.send(
@@ -170,8 +227,9 @@ async def accept(itr: discord.Interaction):
         uid1 = duel_details["user1"]
         uid2 = duel_details["user2"]
         rating = duel_details["rating"]
+        tag = duel_details["tag"]
 
-        contestId, index, _ = give_problem(uid1, uid2, rating)
+        contestId, index, _ = give_problem(uid1, uid2, rating, tag)
         duel_data.duel_start(uid1, contestId, index, int(time.time()))
         u1_mention = itr.guild.get_member(uid1).mention
         u2_mention = itr.user.mention
@@ -229,7 +287,6 @@ async def complete(itr: discord.Interaction):
                 embed.description = f"{u1.mention} won against {u2.mention}!"
         await itr.followup.send(embed=embed, ephemeral=ephemeral)
 
-# 1179623913639137290,722076634257162271,900,519.0,A,1701519934.0
 load_dotenv()
 token = os.getenv("DISCORD_BOT_SECRET")
 bot.run(token)

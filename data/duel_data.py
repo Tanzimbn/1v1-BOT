@@ -9,9 +9,9 @@ def duel_exists(user_id: int) -> bool:
     else :
         return False
 
-def new(uid1: int, uid2: int, rating: int):
+def new(uid1: int, uid2: int, rating: int, tag: str):
     df = pd.read_csv(DUEL_DB)
-    new_duel = pd.DataFrame([{"user1": uid1, "user2": uid2, "rating": rating}])
+    new_duel = pd.DataFrame([{"user1": uid1, "user2": uid2, "rating": rating, "tag": tag}])
     df = pd.concat([df, new_duel])
     df.to_csv(DUEL_DB, index=False)
 
