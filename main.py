@@ -21,6 +21,7 @@ DESCRIPTIONS = {
     "drop": "Drop a duel",
     "complete": "Complete a duel",
     "help": "Shows all commands",
+    "user_rating" : "Show user rating graph"
 }
 
 @bot.event
@@ -279,13 +280,25 @@ async def complete(itr: discord.Interaction):
         else:
             ephemeral = False
             embed.title = "Duel completed"
-            embed.color = None
+            embed.color = discord.Color.green()
             duel_data.drop(uid1)
             if creationTime2 < creationTime1:
                 embed.description = f"{u2.mention} won against {u1.mention}!"
             else:
                 embed.description = f"{u1.mention} won against {u2.mention}!"
         await itr.followup.send(embed=embed, ephemeral=ephemeral)
+
+@bot.tree.command(description=DESCRIPTIONS["user_rating"])
+async def user_rating(itr: discord.Interaction, member:discord.Member):
+    user_id = member.id
+    if handle_data.uid_exists(user_id):
+        handle = handle_data.user_handle(user_id)
+        image_path = cf_api.rating_graph(handle)
+        print(os.path.exists('rating_plot.png'))
+        message = await itr.response.send_message(file=discord.File('rating_plot.png'))
+        os.remove("rating_plot.png")  # Remove the image file after sending
+    else:
+        await itr.response.send_message(content=f"No Handle assigned to {member}.")
 
 load_dotenv()
 token = os.getenv("DISCORD_BOT_SECRET")
