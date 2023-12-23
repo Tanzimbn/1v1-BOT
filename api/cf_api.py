@@ -1,5 +1,6 @@
 from os import path
-
+import matplotlib.pyplot as plt
+from datetime import datetime
 import requests
 
 def cf_query(path: str, params=None):
@@ -55,6 +56,7 @@ def all_problem(rating: int, tag: str):
 def compiler_error_check(handle: str, contestId: int, index: str, submit_time: int):
     params = {"handle": handle, "from":'1', "count": '60'}
     submissions = cf_query("user.status", params)
+    # print(submissions)
     for submission in submissions:
         if submission.get("verdict") == "COMPILATION_ERROR" and submission.get("contestId") == contestId and submission.get("problem").get("index") == index:
             creationTime = submission.get("creationTimeSeconds")
@@ -63,6 +65,28 @@ def compiler_error_check(handle: str, contestId: int, index: str, submit_time: i
             
     return False
 
+def rating_graph(handle: str):
+    params = {"handle":handle}
+    rating_changes = cf_query("user.rating", params)
+    update_times = [datetime.fromtimestamp(change['ratingUpdateTimeSeconds']) for change in rating_changes]
+    new_ratings = [change['newRating'] for change in rating_changes]
+
+    plt.plot(update_times, new_ratings, label='New Rating', marker='o')
+    
+    plt.xlabel('Update Time')
+    plt.ylabel('New Rating')
+    plt.title('Codeforces New Rating Changes')
+    plt.legend()
+    plt.xticks(rotation=45)
+
+    # Save the plot as an image file
+    image_path = 'rating_plot.png'
+    plt.savefig(image_path)
+    plt.close()  
+    return image_path
+
+
+# print(rating_graph("tanzim_bn"))
 # print(compiler_error_check("tanzim_bn", 4, "A", 1703223102))
 # print(user_info("tanzim_bn")['handle'])
 # print(all_problem(3500, "implementation"))
