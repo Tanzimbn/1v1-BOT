@@ -296,7 +296,7 @@ async def user_rating(itr: discord.Interaction, member:discord.Member):
         image_path = cf_api.rating_graph(handle)
         print(os.path.exists('rating_plot.png'))
         message = await itr.response.send_message(file=discord.File('rating_plot.png'))
-        os.remove("rating_plot.png")  # Remove the image file after sending
+       # os.remove("rating_plot.png")  # Remove the image file after sending
     else:
         await itr.response.send_message(content=f"No Handle assigned to {member}.")
 
