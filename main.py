@@ -35,7 +35,7 @@ async def on_ready():
 async def hello(itr: discord.Interaction):
     embed = discord.Embed()
     embed.title = "Hi, myself 1v1."
-    embed.description = "Challenge your friends to a battle of wits! 🎮 Engage in a thrilling 1v1 match where both participants will receive the exact same  challenging problem. The race is on, the first one to solve the problem emerges victorious!\n\nCommands:\n**/hello**: *Get to know more about the bot.*\n**/handle_set**: *Set or update your handle for duels.*\n**/handle_list**: *List of Handle of all user.*\n**/duel**: *Challenge someone for a thrilling 1v1 match. Both will receive the same problem, and the first to solve it wins!*\n**/accept**: *Accept an incoming duel challenge and prepare for the ultimate showdown of wits.*\n**/drop**: *Drop an ongoing duel if you need to step away or change your mind.*\n**/complete**: *Complete a duel that you've successfully solved. Claim your victory and earn bragging rights!*\n\n**Happy coding :)**"
+    embed.description = "Challenge your friends to a battle of wits! 🎮 Engage in a thrilling 1v1 match where both participants will receive the exact same  challenging problem. The race is on, the first one to solve the problem emerges victorious!\n\nCommands:\n**/hello**: *Get to know more about the bot.*\n**/handle_set**: *Set or update your handle for duels.*\n**/handle_list**: *List of Handle of all user.*\n**/duel**: *Challenge someone for a thrilling 1v1 match. Both will receive the same problem, and the first to solve it wins!*\n**/accept**: *Accept an incoming duel challenge and prepare for the ultimate showdown of wits.*\n**/drop**: *Drop an ongoing duel if you need to step away or change your mind.*\n**/complete**: *Complete a duel that you've successfully solved. Claim your victory and earn bragging rights!*\n**/user_rating**: *See rating graph of a server user*\n\n**Happy coding :)**"
     embed.color = discord.Color.blue()
     await itr.response.send_message(embed=embed, ephemeral=True)
 
@@ -65,7 +65,9 @@ async def handle_list(itr: discord.Interaction):
 # async def on_member_remove(member):
 #     channel = client.get_channel(834814212550950985)
 #     await channel.send(f"{member} has leaved us!")
-
+@bot.event
+async def on_command_error(ctx, error):
+    await ctx.send(f"An error occured: {str(error)}")
 
 @bot.tree.command(description=DESCRIPTIONS["handle_set"])
 async def handle_set(itr: discord.Interaction, handle: str):
@@ -74,6 +76,9 @@ async def handle_set(itr: discord.Interaction, handle: str):
     """
     embed = discord.Embed()
     ephemeral = False
+    embed.description = "Checking"
+    embed.color = discord.Color.yellow()
+    await itr.response.send_message(embed=embed, ephemeral=True)
     # check if handle already taken
     id = handle_data.handle_owner(handle)
     # show error if handle does not exist
@@ -83,11 +88,16 @@ async def handle_set(itr: discord.Interaction, handle: str):
         embed.color = discord.Color.red()
         embed.set_footer(text="Please check again!")
     elif cf_api.handle_exists(handle):
+        embed.title = "Authentication"
         embed.description = f"{itr.user.mention} submit a compile error to problem below within 60 seconds"
         problem_url = "https://codeforces.com/problemset/problem/4/A"
         embed.add_field(name="Problem URL", value=problem_url, inline=False)
         embed.color = discord.Color.yellow()
-        await itr.response.send_message(embed=embed)
+        await itr.followup.send(
+        embed=embed,
+        ephemeral=ephemeral,
+        )
+        # await itr.response.send_message(embed=embed, ephemeral=True)
         submit_time = int(time.time())
         await asyncio.sleep(60)
         embed.remove_field(index=0)
@@ -121,9 +131,9 @@ async def tag_autocompletion(
         current: str
     ) -> typing.List[discord.app_commands.Choice[str]]:
         data = []
-        for drink_choice in ['greedy', 'dp', 'math', 'combinatorics', 'tree']:
-            if current.lower() in drink_choice.lower():
-                data.append(discord.app_commands.Choice(name=drink_choice, value=drink_choice))
+        for _choice in ['binary search', 'bitmasks', 'brute force', 'chinese remainder theorem', 'combinatorics', 'constructive algorithms', 'data structures', 'dfs and similar', 'divide and conquer', 'dp', 'dsu', 'expression parsing', 'fft', 'flows', 'games', 'geometry', 'graph matchings', 'graphs', 'greedy', 'hashing', 'implementation', 'interactive', 'math', 'matrices', 'meet-in-the-middle', 'number theory', 'probabilities', 'schedules', 'shortest paths', 'sortings', 'string suffix structures', 'strings', 'ternary search', 'trees', 'two pointers']:
+            if current.lower() in _choice.lower():
+                data.append(discord.app_commands.Choice(name=_choice, value=_choice))
         return data 
 
 @bot.tree.command(description=DESCRIPTIONS["duel"])
@@ -176,7 +186,7 @@ async def duel(itr: discord.Interaction, opponent: discord.Member, rating: int, 
         embed.add_field(name="Opponent", value=itr.user.mention)
         embed.add_field(name="rating", value=rating)
         embed.add_field(name="tag", value=tag)
-        embed.color = None
+        embed.color = discord.Color.blue()
         embed.set_footer(text="Type /accept to accept the duel")
     await itr.followup.send(
         content=message_content,
@@ -200,6 +210,7 @@ async def drop(itr: discord.Interaction):
             inline=False,
         )
         embed.add_field(name="Dropped by", value=itr.user.mention)
+        embed.color = discord.Color.red()
     else:
         embed.description = "No duel to drop"
         embed.color = discord.Color.red()
@@ -231,17 +242,29 @@ async def accept(itr: discord.Interaction):
         tag = duel_details["tag"]
 
         contestId, index, _ = give_problem(uid1, uid2, rating, tag)
-        duel_data.duel_start(uid1, contestId, index, int(time.time()))
-        u1_mention = itr.guild.get_member(uid1).mention
-        u2_mention = itr.user.mention
-        problem_url = f"https://codeforces.com/problemset/problem/{contestId}/{index}"
 
-        message_content = u1_mention
-        embed.title = "Duel started!"
-        embed.description = f"{u1_mention} :crossed_swords: {u2_mention}"
-        embed.add_field(name="Rating", value=rating)
-        embed.add_field(name="Problem URL", value=problem_url, inline=False)
-        embed.set_footer(text="Type /complete after completing the challenge")
+        if contestId == -1:
+            u1_mention = itr.guild.get_member(uid1).mention
+            u2_mention = itr.guild.get_member(uid2).mention
+            message_content = u1_mention
+            embed.color = discord.Color.red()
+            embed.title = "No problem exist!"
+            embed.description = f"Hey, {u1_mention} and {u2_mention}. No problem exist with {rating} rating and \"{tag}\" tag."
+            embed.set_footer(text="Type /drop to cancel this challenge and start a new one with valid rating and tag combination.")
+        else :
+            duel_data.duel_start(uid1, contestId, index, int(time.time()))
+            u1_mention = itr.guild.get_member(uid1).mention
+            u2_mention = itr.guild.get_member(uid2).mention
+            problem_url = f"https://codeforces.com/problemset/problem/{contestId}/{index}"
+
+            message_content = u1_mention
+            embed.title = "Duel started!"
+            embed.color = discord.Color.green()
+            embed.description = f"{u1_mention} :crossed_swords: {u2_mention}"
+            embed.add_field(name="Rating", value=rating)
+            embed.add_field(name="Tag", value=tag)
+            embed.add_field(name="Problem URL", value=problem_url, inline=False)
+            embed.set_footer(text="Type /complete after completing the challenge")
         await itr.followup.send(
             content=message_content,
             embed=embed,
@@ -291,12 +314,21 @@ async def complete(itr: discord.Interaction):
 @bot.tree.command(description=DESCRIPTIONS["user_rating"])
 async def user_rating(itr: discord.Interaction, member:discord.Member):
     user_id = member.id
+    embed = discord.Embed()
+    ephemeral = True
+    embed.description = "Preparing graph..."
+    embed.color = discord.Color.yellow()
     if handle_data.uid_exists(user_id):
+        message = await itr.response.send_message(embed=embed, ephemeral=ephemeral)
         handle = handle_data.user_handle(user_id)
         image_path = cf_api.rating_graph(handle)
         print(os.path.exists('rating_plot.png'))
-        message = await itr.response.send_message(file=discord.File('rating_plot.png'))
-        os.remove("rating_plot.png")  # Remove the image file after sending
+        await itr.followup.send(
+        file=discord.File('rating_plot.png'),
+        ephemeral=ephemeral
+        )
+        # await itr.response.send_message(content=f"No Handle assigned to {member}.")
+        # os.remove("rating_plot.png")  # Remove the image file after sending
     else:
         await itr.response.send_message(content=f"No Handle assigned to {member}.")
 

@@ -15,6 +15,7 @@ def give_problem(uid1: int, uid2: int, rating: int, tag: str):
         if prob in cancel_prob:
             continue
         return prob
+    return (-1, -1, -1)
 
 def random_problem(rating: int, tag: str):
     problems = list(cf_api.all_problem(rating=rating, tag=tag))
